@@ -3,6 +3,18 @@ import requests
 import xml.etree.ElementTree as ET
 
 
+def swap_link_with_magnet(bangumis):
+    for bangumi in bangumis:
+        link = bangumi.pop("link", None)
+        _id = link.split("/")[-1]
+        torrent = json.loads(
+            requests.post(
+                "https://bangumi.moe/api/torrent/fetch", json={"_id": _id}
+            ).content
+        )
+        bangumi["magnet"] = torrent["magnet"]
+
+
 class Feeder:
     def __init__(self):
         self.rss_url = "https://bangumi.moe/rss/latest"
@@ -30,7 +42,6 @@ class Feeder:
     def search_archive(self, query, keywords):
         resp = requests.post(self.search_url, json={"query": query})
         torrents = json.loads(resp.content)["torrents"]
-        print(torrents)
         return list(
             map(
                 lambda x: {"title": x["title"], "magnet": x["magnet"]},
