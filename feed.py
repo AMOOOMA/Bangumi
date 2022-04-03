@@ -1,6 +1,11 @@
+import os
 import json
 import requests
+from pathlib import Path
 import xml.etree.ElementTree as ET
+
+
+downloads_path = str(Path.home() / "Downloads")
 
 
 def swap_link_with_magnet(bangumis):
@@ -13,6 +18,26 @@ def swap_link_with_magnet(bangumis):
             ).content
         )
         bangumi["magnet"] = torrent["magnet"]
+
+
+def extract_episode_num(title):
+    nums = list(filter(lambda x: x.isnumeric(), title.split(" ")))
+    return nums[-1]
+
+
+def filter_local_files(keywords, bangumis, folder_path=downloads_path):
+    filenames = list(
+        filter(
+            lambda filename: all(map(lambda x: x in filename, keywords)),
+            os.listdir(folder_path),
+        )
+    )
+    existed_episode = [extract_episode_num(filename) for filename in filenames]
+    return list(
+        filter(
+            lambda x: extract_episode_num(x["title"]) not in existed_episode, bangumis
+        )
+    )
 
 
 class Feeder:
