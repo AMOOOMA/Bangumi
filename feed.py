@@ -25,7 +25,7 @@ def extract_episode_num(title):
     return nums[-1]
 
 
-def filter_local_files(keywords, bangumis, folder_path=downloads_path):
+def filter_local_files(keywords, bangumis, folder_path):
     filenames = list(
         filter(
             lambda filename: all(map(lambda x: x in filename, keywords)),
@@ -41,9 +41,10 @@ def filter_local_files(keywords, bangumis, folder_path=downloads_path):
 
 
 class Feeder:
-    def __init__(self):
+    def __init__(self, download_folder=downloads_path):
         self.rss_url = "https://bangumi.moe/rss/latest"
         self.search_url = "https://bangumi.moe/api/v2/torrent/search"
+        self.download_folder = download_folder
 
     def read_latest(self):
         content = requests.get(self.rss_url).content
@@ -57,22 +58,36 @@ class Feeder:
 
     def read_latest_with_keywords(self, keywords):
         bangumis = self.read_latest()
-        return list(
-            filter(
-                lambda bangumi: all(map(lambda x: x in bangumi["title"], keywords)),
-                bangumis,
+        return swap_link_with_magnet(
+            filter_local_files(
+                keywords,
+                list(
+                    filter(
+                        lambda bangumi: all(
+                            map(lambda x: x in bangumi["title"], keywords)
+                        ),
+                        bangumis,
+                    )
+                ),
+                self.download_folder,
             )
         )
 
     def search_archive(self, query, keywords):
         resp = requests.post(self.search_url, json={"query": query})
         torrents = json.loads(resp.content)["torrents"]
-        return list(
-            map(
-                lambda x: {"title": x["title"], "magnet": x["magnet"]},
-                filter(
-                    lambda bangumi: all(map(lambda x: x in bangumi["title"], keywords)),
-                    torrents,
-                ),
-            )
+        return filter_local_files(
+            keywords,
+            list(
+                map(
+                    lambda x: {"title": x["title"], "magnet": x["magnet"]},
+                    filter(
+                        lambda bangumi: all(
+                            map(lambda x: x in bangumi["title"], keywords)
+                        ),
+                        torrents,
+                    ),
+                )
+            ),
+            self.download_folder,
         )
